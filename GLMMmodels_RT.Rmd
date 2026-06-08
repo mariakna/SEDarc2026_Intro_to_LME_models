@@ -50,7 +50,10 @@ At its simplest, a linear model relates a numeric outcome (e.g., fuel efficiency
 
 ```{r}
 data(mtcars)
+head(mtcars)
+```
 
+```{r}
 model1 <- lm(mpg ~ wt, data = mtcars)
 summary(model1)
 ```
@@ -224,7 +227,7 @@ The situation is now changing. Many universities still teach t-tests and ANOVA, 
 
 So where do linear mixed-effects models fit?
 
-Linear mixed-effects models extend the logic of ordinary linear regression to situations where observations are not independent. In the current mtcars dataset, we have one value per car, and these values are independent (e.g., the weight of a Mazda has nothing to do with the weight of a Porsche). However, if we had multiple measurements per car, this independence assumption would no longer hold: observations from the same car would likely be related.
+Linear mixed-effects models extend the logic of ordinary linear regression to situations where observations are not independent. In the current `mtcars` dataset, we have one value per car, and these values are independent (e.g., the weight of a Mazda has nothing to do with the weight of a Porsche). However, if we had multiple measurements per car, this independence assumption would no longer hold: observations from the same car would likely be related.
 
 Standard linear models, t-tests, or ANOVA assume that each observation is independent. Applying them directly in the presence of correlated data can underestimate variability and inflate statistical significance. Linear mixed-effects models address this by explicitly including random effects, which capture systematic differences across participants, stimuli, or other clusters, while still estimating the fixed effects of interest (e.g., experimental conditions). Conceptually, they are built on the same foundation as t-tests, ANOVA, and regression: the outcome is expressed as a combination of predictors plus error. The key difference is that mixed models acknowledge the hierarchical or repeated-measures structure of the data, allowing us to make valid inferences without oversimplifying the design.
 
@@ -252,7 +255,7 @@ There were three types of distractor words in this task:
 The image below illustrates how pictures with the first two types of distractors appeared. For clarity in the figure, the superimposed words are shown in English, but in the actual experiment they were presented in German.
 
 <center>
-![FigName](pwi.png){width=300px}
+![](pwi.png){width=300px}
 </center>
 
 ```{r}
@@ -505,6 +508,8 @@ $$
 
 Here, $u_{subj[n]}$ is the participant-specific adjustment to the overall intercept $\alpha$. In other words, each participant's baseline response time is $\alpha + u_{subj[n]}$ (often called a *random intercept*), where $u_{subj[n]}$ captures how much that participant differs from the average. 
 
+In `lme4` syntax: `RT ~ Cond + (1 | subj)`.
+
 The same idea applies to the effect of condition. Some participants might be more influenced by whether the distractor is related or unrelated than others. To account for this, we can adjust the slope for each participant so that the fixed effect $\beta$ would represent the average effect, while the participant-specific adjustment $w_{subj[n]}$ would capture how much each participant's effect differs from the average. This would create a so-called *random slope*:
 
 $$
@@ -512,6 +517,8 @@ RT_n \sim \alpha + u_{subj[n]} + (\beta + w_{subj[n]}) \cdot Cond_n + \varepsilo
 $$
 
 By having included the adjustments to both the intercept and the slope for each participant, we are now accounting for the fact that each participant can have their own average response time, and that the effect of condition can vary across participants.
+
+In `lme4` syntax: `RT ~ Cond + (1 + Cond || subj)`.
 
 These adjustments capture systematic variation across participants and items and are called *random effects*.
 
@@ -526,6 +533,8 @@ RT_n \sim \alpha + u_{subj[n]} + u_{item[n]} + (\beta + w_{subj[n]}) \cdot Cond_
 $$
 
 where the newly added term $u_{item[n]}$ represents the item-specific adjustment to the overall mean response time, capturing how much that particular picture tends to be named faster or slower than the average.
+
+In `lme4` syntax: `RT ~ Cond + (1 + Cond || subj) + (1 | TargetAnswer)`.
   
 Similarly, we can add the item-specific adjustments to the slope:
 
@@ -539,6 +548,8 @@ To summarise, our model now includes four random terms:
 * $w_{subj[n]}$ — the by-participant adjustment for the slope; 
 * $u_{item[n]}$ — the by-item adjustment for the intercept;
 * $w_{item[n]}$ — the by-item adjustment for the slope.
+
+This equated to `RT ~ Cond + (1 + Cond || subj) + (1 + Cond || TargetAnswer)`.
 
 This looks great: our model is now much more flexible than the complete pooling model and accounts for multiple sources of variability. However, it currently assumes that the varying intercepts and slopes are independent. In other words, it assumes that there is no systematic relationship between a participant's average response speed and how strongly the experimental manipulation affects them. While this might sometimes be reasonable, it's also possible that participants who respond faster or slower tend to show stronger or weaker effects.
 
@@ -894,7 +905,7 @@ So, in the model above:
 
 * `RT ~ Cond` says we are predicting response time (RT) from the variable `Cond`;
 
-* `(1 + Cond || Subj)` specifies random intercepts and slopes for each subject (Subj) without correlation between them (the `||` notation);
+* `(1 + Cond || Subj)` specifies random intercepts and slopes for each subject (`Subj`) without correlation between them (the `||` notation);
 
 * `(1 + Cond || TargetAnswer)` does the same for each item (picture).
 
@@ -1293,9 +1304,9 @@ where:
 - $x_{ij}' \beta$ represents the fixed effects  
 - $Z_{ij}' u_j$ represents the random effects, with $Z_{ij}$ being the random-effects design matrix and $u_j$ being the vector of random-effect coefficients.  
 
-The key thing to understand here is that, unlike a linear mixed-effects model, in a GLMM, the *random effects enter the linear predictor, not the residual term*. This is because, in GLMMs, variability is captured through the specified distribution and the random effects structure.
+The key thing to understand here is that, unlike a linear mixed-effects model, in a GLME model, the *random effects enter the linear predictor, not the residual term*. This is because, in GLME models, variability is captured through the specified distribution and the random effects structure.
 
-To illustrate, let me rewrite the LMM equation in the GLMM style:
+To illustrate, let me rewrite the LME equation in the GLME style:
 
 $$
 Y_{ij} = x_{ij}'\beta + Z_{ij}' u_j + \epsilon_{ij}
@@ -1306,7 +1317,7 @@ Here:
 - $Z_{ij}' u_j$ represents the random effects
 - $\epsilon_{ij}$ represents the residual error (assumed normally distributed), which captures all variability not explained by fixed or random effects.  
 
-In contrast, in a GLMM:
+In contrast, in a GLME:
 
 $$
 g(\mu_{ij}) = \eta_{ij} = x_{ij}' \beta + Z_{ij}' u_j
@@ -1322,9 +1333,9 @@ where
   
   - through the distribution of the outcome (e.g., binomial, Poisson, Gamma), which naturally allows for non-constant variance and skew.
 
-The intuition is that random effects are kind of shifting the baseline of the linear predictor for each cluster. For example, if you have participants as a random effect, each will have their own intercept that adjusts the predicted value up or down. The GLMM will then convert this linear predictor to the expected outcome via the link function, and the outcome's distribution will model the remaining "noise".
+The intuition is that random effects are kind of shifting the baseline of the linear predictor for each cluster. For example, if you have participants as a random effect, each will have their own intercept that adjusts the predicted value up or down. The GLME will then convert this linear predictor to the expected outcome via the link function, and the outcome's distribution will model the remaining "noise".
 
-Now that we have a better understanding of what a GLMM does and how it differs from a LMM, let's return to our experiment. Our outcome measure is response times, which means the first step is to determine an appropriate distribution for this type of variable.
+Now that we have a better understanding of what a GLME does and how it differs from a LME, let's return to our experiment. Our outcome measure is response times, which means the first step is to determine an appropriate distribution for this type of variable.
 
 One good option is the Gamma distribution, visualised below:
 
@@ -1523,13 +1534,13 @@ tab_model(mod3,
 
 In both models, we cannot reject the null hypothesis of no difference between the semantically unrelated and the untrained distractors. However, the models produce different results for the second contrast — that between semantically related and unrelated distractors. Why might this be the case?
 
-The linear mixed model (LMM) was fitted to transformed RTs, whereas the generalised linear mixed model (GLMM) with a Gamma distribution models raw RTs using a log link. This means that, while the LMM estimates effects on the transformed scale, where the variance has been stabilised and the distribution is closer to normal, the Gamma GLMM estimates effects on the log of the expected RT, with variance tied to the mean through the Gamma distribution.
+The linear mixed-effects (LME) model was fitted to transformed RTs, whereas the generalised linear mixed (GLME) model with a Gamma distribution models raw RTs using a log link. This means that, while the LME estimates effects on the transformed scale, where the variance has been stabilised and the distribution is closer to normal, the Gamma GLME estimates effects on the log of the expected RT, with variance tied to the mean through the Gamma distribution.
 
 This distinction has important implications for statistical inference:
 
-- The transformed LMM assumes homoscedastic residuals (constant variance across conditions), while the Gamma GLMM assumes that variability increases with the mean. To illustrate,if one of the conditions differed from the other in both mean RT and variance structure, the Gamma model may have produced larger standard errors, reducing statistical significance.
+- The transformed LME assumes homoscedastic residuals (constant variance across conditions), while the Gamma GLME assumes that variability increases with the mean. To illustrate, if one of the conditions differed from the other in both mean RT and variance structure, the Gamma model may have produced larger standard errors, reducing statistical significance.
 
-- RT data are typically positively skewed, with long right tails. Transformations compress extreme values, which can increase sensitivity to mean differences. In contrast, the Gamma GLMM explicitly models skew, which can make effect estimates more conservative if extreme values mostly add noise rather than signal.
+- RT data are typically positively skewed, with long right tails. Transformations compress extreme values, which can increase sensitivity to mean differences. In contrast, the Gamma GLME explicitly models skew, which can make effect estimates more conservative if extreme values mostly add noise rather than signal.
 
 Similarly, recall that the mean difference between conditions is about 30 ms, with a small standard error of about 6 ms (indicating precise estimates of the means) but a relatively large standard deviation of about 49 ms:
 
@@ -1537,9 +1548,9 @@ Similarly, recall that the mean difference between conditions is about 30 ms, wi
 RT
 ```
 
-This reflects substantial trial-to-trial variability. In a Gamma GLMM, where variance is linked to the mean, this variability might have inflated uncertainty estimates, leading to a non-significant result.
+This reflects substantial trial-to-trial variability. In a Gamma GLME, where variance is linked to the mean, this variability might have inflated uncertainty estimates, leading to a non-significant result.
 
-You may also recall that, in the LMM, the 95% confidence interval for the effect of condition on the second contrast was very close to including zero:
+You may also recall that, in the LME, the 95% confidence interval for the effect of condition on the second contrast was very close to including zero:
 
 ```{r}
 labels <- c("Contrast 1: Sem. unrelated vs. untrained pseudoword distractors", 
@@ -1554,7 +1565,7 @@ plot_model(mod3, title = "", terms = keep.terms, axis.labels = rev(labels),
            scale_color_sjplot(palette = "circus")
 ```
 
-Conceptually, the Gamma GLMM better reflects the data-generating process for RTs. However, a model is only "better" if its distributional assumptions fit the data, the variance structure is appropriate, and diagnostics support the fit. In our case, the simulated residuals did not perfectly match the expected distribution, suggesting that the fit of the GLMM might not be ideal:
+On the other hand... Conceptually, the Gamma GLME better reflects the data-generating process for RTs. However, a model is only "better" if its distributional assumptions fit the data, the variance structure is appropriate, and diagnostics support the fit. In our case, the simulated residuals did not perfectly match the expected distribution, suggesting that the fit of the GLME might not be ideal:
 
 ```{r}
 q_theoretical <- qgamma(ppoints(length(dataCorr3$RT)), shape = shape, rate = rate)
@@ -1583,7 +1594,7 @@ $$
 \text{simulated residual} = \frac{\text{number of simulated responses below observed value}}{\text{number of simulations}}
 $$
 
-These residuals are expected to be uniformly distributed between 0 and 1 if the model fits well. The messages about deviations from uniformity suggest that the model may not fit the data perfectly. This approach is conservative: small deviations are often not problematic. However, combined with the other diagnostics we have performed, it may indicate that the Gamma GLMM results should be interpreted with caution.
+These residuals are expected to be uniformly distributed between 0 and 1 if the model fits well. The messages about deviations from uniformity suggest that the model may not fit the data perfectly. This approach is conservative: small deviations are often not problematic. However, combined with the other diagnostics we have performed, it may indicate that the Gamma GLME results should be interpreted with caution.
 
 So what do these observations tell us? Taken together, they suggest that a true effect *might* exist, but there is considerable uncertainty around the estimate. This uncertainty makes it difficult to draw clear and reliable conclusions from this dataset alone. The most prudent course of action is to *replicate the study with more data*.
 
